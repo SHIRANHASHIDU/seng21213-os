@@ -6,6 +6,7 @@
 #include "scheduler.h"
 #include "io.h"
 #include "mutex.h"
+#include "semaphore.h"
 
 /* Small itoa - no libc available. Writes value as decimal into buf. */
 static void uint_to_str(uint32_t val, char *buf) {
@@ -144,6 +145,7 @@ static void shell_entry(void) {
     shell_run();
     kernel_halt();
 }
+
 
 void kernel_main(void) {
     vga_init();

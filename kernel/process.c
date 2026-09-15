@@ -1,5 +1,14 @@
 #include "process.h"
 #include "string.h"
+#include "io.h"
+
+extern void schedule(void);   // defined in boot/switch.asm
+
+void block_current_and_reschedule(proc_state_t reason) {
+    current_pcb->state = reason;
+    __asm__ volatile ("int $0x20");
+}
+
 
 pcb_t  process_table[MAX_PROCESSES];
 pcb_t *current_pcb = 0;
@@ -27,7 +36,10 @@ void process_init(void) {
  *   GS, FS, ES, DS, EDI, ESI, EBP, ESP(dummy), EBX, EDX, ECX, EAX,
  *   EIP, CS, EFLAGS
  */
+
 int create_process(void (*entry)(void), const char *name) {
+    disable_interrupts();
+
     int slot = -1;
     for (int i = 0; i < MAX_PROCESSES; i++) {
         if (process_table[i].state == PROC_UNUSED) {
@@ -36,12 +48,12 @@ int create_process(void (*entry)(void), const char *name) {
         }
     }
     if (slot < 0) {
+        enable_interrupts();
         return -1; /* process table full */
     }
 
     pcb_t *p = &process_table[slot];
     p->pid = next_pid++;
-    p->state = PROC_READY;
     strcpy(p->name, name);
 
     uint32_t *sp = (uint32_t *)(p->stack + PROC_STACK_SIZE);
@@ -63,5 +75,7 @@ int create_process(void (*entry)(void), const char *name) {
     *(--sp) = 0x10;            /* GS                                      */
 
     p->saved_esp = (uint32_t)sp;
+    p->state = PROC_READY;
+    enable_interrupts();
     return p->pid;
 }

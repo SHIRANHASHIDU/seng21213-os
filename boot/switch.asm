@@ -70,3 +70,32 @@ scheduler_launch_first:
     iretd
 
 section .note.GNU-stack noalloc noexec nowrite progbits
+global schedule
+extern current_pcb
+extern scheduler_pick_next
+
+section .text
+global schedule
+extern current_pcb
+extern scheduler_pick_next
+
+schedule:
+    pushad
+    push gs
+    push fs
+    push es
+    push ds
+
+    mov  eax, [current_pcb]
+    mov  [eax], esp          ; pcb->saved_esp = esp
+
+    call scheduler_pick_next
+    mov  [current_pcb], eax
+    mov  esp, [eax]          ; esp = new_pcb->saved_esp
+
+    pop  ds
+    pop  es
+    pop  fs
+    pop  gs
+    popad
+    ret

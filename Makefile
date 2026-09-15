@@ -25,6 +25,9 @@ KERN_SRCS := \
     $(KERN_DIR)/string.c \
     $(KERN_DIR)/process.c \
     $(KERN_DIR)/scheduler.c \
+    $(KERN_DIR)/mutex.c \
+    $(KERN_DIR)/semaphore.c \
+    $(KERN_DIR)/thread.c \
     $(DRV_DIR)/vga/vga.c \
     $(DRV_DIR)/keyboard/keyboard.c
 

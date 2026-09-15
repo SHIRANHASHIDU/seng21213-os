@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define MAX_PROCESSES   8
+#define MAX_PROCESSES   12
 #define PROC_STACK_SIZE 4096
 #define PROC_NAME_LEN   16
 
@@ -11,6 +11,7 @@ typedef enum {
     PROC_UNUSED = 0,
     PROC_READY,
     PROC_RUNNING,
+    PROC_BLOCKED,
     PROC_TERMINATED
 } proc_state_t;
 
@@ -32,5 +33,6 @@ extern pcb_t *current_pcb;
 
 void process_init(void);
 int  create_process(void (*entry)(void), const char *name);
+void block_current_and_reschedule(proc_state_t reason);
 
 #endif
