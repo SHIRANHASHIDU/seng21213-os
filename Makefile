@@ -28,6 +28,7 @@ KERN_SRCS := \
     $(KERN_DIR)/mutex.c \
     $(KERN_DIR)/semaphore.c \
     $(KERN_DIR)/thread.c \
+    $(KERN_DIR)/pmm.c \
     $(DRV_DIR)/vga/vga.c \
     $(DRV_DIR)/keyboard/keyboard.c
 

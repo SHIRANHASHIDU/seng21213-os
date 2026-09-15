@@ -2,6 +2,7 @@
 #include "vga.h"
 #include "keyboard.h"
 #include "shell.h"
+#include "../include/pmm.h"
 #include "process.h"
 #include "scheduler.h"
 #include "io.h"
