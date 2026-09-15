@@ -13,6 +13,7 @@ void vga_init(void);
 void vga_clear(void);
 void vga_putc(char c);
 void vga_puts(const char *s);
+void vga_put_at(int row, int col, char c, unsigned char colour);
 void vga_set_colour(vga_colour_t fg, vga_colour_t bg);
 
 #endif

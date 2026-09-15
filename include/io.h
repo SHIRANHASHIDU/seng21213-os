@@ -17,4 +17,12 @@ static inline void io_wait(void) {
     outb(0x80, 0);
 }
 
+static inline void enable_interrupts(void) {
+    __asm__ volatile ("sti");
+}
+
+static inline void disable_interrupts(void) {
+    __asm__ volatile ("cli");
+}
+
 #endif

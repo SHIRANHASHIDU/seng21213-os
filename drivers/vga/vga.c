@@ -81,3 +81,10 @@ void vga_puts(const char *s) {
         vga_putc(*s++);
     }
 }
+
+/* Write directly to a fixed cell without touching the shared cursor.
+ * Used by background demo processes so they don't scramble shell output. */
+void vga_put_at(int row, int col, char c, unsigned char colour) {
+    if (row < 0 || row >= VGA_HEIGHT || col < 0 || col >= VGA_WIDTH) return;
+    vga_buffer[row * VGA_WIDTH + col] = vga_entry(c, colour);
+}

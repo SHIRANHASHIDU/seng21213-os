@@ -3,6 +3,7 @@
 #include "keyboard.h"
 #include "string.h"
 #include "kernel.h"
+#include "process.h"
 
 #define CMD_BUF_SIZE 128
 #define MAX_ARGS     8
@@ -21,6 +22,8 @@ static void cmd_echo(int argc, char **argv);
 static void cmd_version(int argc, char **argv);
 static void cmd_colour(int argc, char **argv);
 static void cmd_halt(int argc, char **argv);
+static void cmd_ps(int argc, char **argv);
+static void cmd_kill(int argc, char **argv);
 
 static const shell_command_t commands[] = {
     { "help",    "List all available commands",            cmd_help    },
@@ -29,6 +32,8 @@ static const shell_command_t commands[] = {
     { "version", "Print kernel name and version",          cmd_version },
     { "colour",  "<fg> <bg> - change text colour (0-15)",  cmd_colour  },
     { "halt",    "Disable interrupts and halt the CPU",    cmd_halt    },
+    { "ps",      "List all processes (PID, state, name)",  cmd_ps      },
+    { "kill",    "<pid> - terminate a process by PID",     cmd_kill    },
 };
 #define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -99,6 +104,65 @@ static void cmd_halt(int argc, char **argv) {
     __asm__ volatile ("cli");
     __asm__ volatile ("hlt");
     for (;;) { __asm__ volatile ("hlt"); }
+}
+
+static const char *state_name(proc_state_t s) {
+    switch (s) {
+        case PROC_READY:      return "READY";
+        case PROC_RUNNING:    return "RUNNING";
+        case PROC_TERMINATED: return "TERMINATED";
+        default:               return "UNUSED";
+    }
+}
+
+static void cmd_ps(int argc, char **argv) {
+    (void)argc; (void)argv;
+    vga_puts("PID  STATE       NAME\n");
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        pcb_t *p = &process_table[i];
+        if (p->state == PROC_UNUSED) continue;
+
+        char pidbuf[8];
+        int v = p->pid, j = 0;
+        char tmp[8];
+        if (v == 0) { tmp[j++] = '0'; }
+        while (v > 0) { tmp[j++] = (char)('0' + (v % 10)); v /= 10; }
+        int k = 0;
+        while (j > 0) pidbuf[k++] = tmp[--j];
+        pidbuf[k] = '\0';
+
+        vga_puts(pidbuf);
+        vga_puts("    ");
+        vga_puts(state_name(p->state));
+        vga_puts("      ");
+        vga_puts(p->name);
+        vga_putc('\n');
+    }
+}
+
+static void cmd_kill(int argc, char **argv) {
+    if (argc != 2) {
+        vga_puts("usage: kill <pid>\n");
+        return;
+    }
+    int target = simple_atoi(argv[1]);
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        pcb_t *p = &process_table[i];
+        if (p->state != PROC_UNUSED && p->pid == target) {
+            if (p == current_pcb) {
+                vga_puts("cannot kill the shell's own process\n");
+                return;
+            }
+            p->state = PROC_TERMINATED;
+            vga_puts("killed pid ");
+            vga_puts(argv[1]);
+            vga_putc('\n');
+            return;
+        }
+    }
+    vga_puts("no such pid: ");
+    vga_puts(argv[1]);
+    vga_putc('\n');
 }
 
 static void read_line(char *buf, int max_len) {

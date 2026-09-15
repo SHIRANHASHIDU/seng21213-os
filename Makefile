@@ -23,11 +23,15 @@ KERN_SRCS := \
     $(KERN_DIR)/kernel.c \
     $(KERN_DIR)/shell.c \
     $(KERN_DIR)/string.c \
+    $(KERN_DIR)/process.c \
+    $(KERN_DIR)/scheduler.c \
     $(DRV_DIR)/vga/vga.c \
     $(DRV_DIR)/keyboard/keyboard.c
 
 # Add new NASM (elf32) sources here (e.g. boot/switch.asm in Stage 1).
-BOOT_ASM_ELF := $(BOOT_DIR)/kernel_entry.asm
+BOOT_ASM_ELF := \
+    $(BOOT_DIR)/kernel_entry.asm \
+    $(BOOT_DIR)/switch.asm
 
 KERN_OBJS := $(patsubst %.c,$(BUILD)/%.o,$(KERN_SRCS))
 BOOT_OBJS := $(patsubst $(BOOT_DIR)/%.asm,$(BUILD)/boot/%.o,$(BOOT_ASM_ELF))
@@ -45,8 +49,8 @@ $(BUILD)/boot/boot.bin: $(BOOT_DIR)/boot.asm | $(BUILD)/boot
 	@size=$$(stat -c%s $@ 2>/dev/null || stat -f%z $@); \
 	 echo " Boot sector: $$size bytes (must be 512)"
 
-# ---- Kernel entry stub (elf32 object) ------------------------------------
-$(BUILD)/boot/kernel_entry.o: $(BOOT_DIR)/kernel_entry.asm | $(BUILD)/boot
+# ---- Boot-stage elf32 objects (entry stub, context switch, etc.) --------
+$(BUILD)/boot/%.o: $(BOOT_DIR)/%.asm | $(BUILD)/boot
 	@echo " AS  $<"
 	@$(AS) $(ASFLAGS_ELF) $< -o $@
 
@@ -57,9 +61,9 @@ $(BUILD)/%.o: %.c | $(BUILD)
 	@$(CC) $(CFLAGS) $< -o $@
 
 # ---- Link kernel.elf -------------------------------------------------------
-$(BUILD)/kernel.elf: $(BUILD)/boot/kernel_entry.o $(KERN_OBJS)
+$(BUILD)/kernel.elf: $(BOOT_OBJS) $(KERN_OBJS)
 	@echo " LD  $@"
-	@$(LD) $(LDFLAGS) -o $@ $(BUILD)/boot/kernel_entry.o $(KERN_OBJS)
+	@$(LD) $(LDFLAGS) -o $@ $(BOOT_OBJS) $(KERN_OBJS)
 
 # ---- Flatten to raw binary --------------------------------------------------
 $(BUILD)/kernel.bin: $(BUILD)/kernel.elf

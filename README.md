@@ -7,7 +7,7 @@ manager -> file system). Runs inside QEMU.
 ## Current status
 
 - [x] Stage 0 - Boot, VGA & Shell (`v0.1-stage0`)
-- [ ] Stage 1 - Process Table & Round-Robin Scheduler
+- [x] Stage 1 - Process Table & Round-Robin Scheduler (`v0.2-stage1`)
 - [ ] Stage 2 - Threads, Mutex & Semaphore
 - [ ] Stage 3 - Physical Memory Manager
 - [ ] Stage 4 - RAM Disk File System
@@ -57,6 +57,58 @@ make run
 
 Type `help` at the `kernel>` prompt to see all commands. `colour 14 1` sets
 yellow-on-blue text. `halt` stops the CPU cleanly.
+
+## Stage 1 - Process Table & Round-Robin Scheduler
+
+- `pcb_t` process control block (`include/process.h`): PID, state, saved
+  stack pointer, name, and a dedicated 4 KB stack per process.
+- `create_process(entry, name)` builds a synthetic interrupt stack frame
+  so a brand-new process can be "resumed" by the generic context-switch
+  epilogue on its very first run.
+- The i8253 PIT is programmed to fire IRQ0 at 100 Hz (10 ms tick),
+  vectored through a 256-entry IDT after remapping the 8259 PIC.
+- `boot/switch.asm` implements the actual context switch: on every timer
+  tick it saves the interrupted process's full register state onto its
+  own stack, asks the C scheduler (`scheduler_pick_next`) which process
+  runs next, switches to that process's stack, restores its registers,
+  and `iret`s into it.
+- Round-robin scheduling: `kernel_main` starts three processes - the
+  interactive shell, and two demo processes (`proc_a`, `proc_b`) that
+  each print an incrementing counter to a fixed screen cell at different
+  rates, proving true preemptive concurrency.
+- New shell commands: `ps` (lists PID / state / name for every process)
+  and `kill <pid>` (marks a process `TERMINATED` so the scheduler skips
+  it going forward).
+
+### Testing
+
+```bash
+make run
+```
+
+Watch the top-right corner of the screen: `A <counter>` and `B <counter>`
+should both be incrementing simultaneously, at different speeds, while
+the shell prompt stays fully responsive. Then try:
+
+```
+kernel> ps
+PID  STATE       NAME
+1    RUNNING      shell
+2    READY      proc_a
+3    READY      proc_b
+
+kernel> kill 2
+killed pid 2
+
+kernel> ps
+PID  STATE       NAME
+1    RUNNING      shell
+2    TERMINATED      proc_a
+3    READY      proc_b
+```
+
+After `kill 2`, process A's on-screen counter should freeze while B keeps
+incrementing - confirming the scheduler actually stopped dispatching it.
 
 ## Extensions
 
